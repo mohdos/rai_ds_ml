@@ -93,7 +93,7 @@ def plot_graphs(x_lists, y_lists, labels=None, titles=None):
     fig.set_size_inches(np.array(fig.get_size_inches()) * n_ims)
     plt.show()
 
-def plot_metrics(df, xcolumns, ycolumn, encoding_type: encodingTypes = encodingTypes.one_hot_encoding, normalized=False, test_size=0.2, runtimes=5):
+def plot_metrics(df, xcolumns, ycolumn, encoding_type: encodingTypes = encodingTypes.one_hot_encoding, normalized=False, test_size=0.2, runtimes=5, title_suffix = ''):
     mse_list = []
     r2_list = []
     for i in range(runtimes):
@@ -113,4 +113,4 @@ def plot_metrics(df, xcolumns, ycolumn, encoding_type: encodingTypes = encodingT
     # plt.plot(x_plots, r2_list, label='R2_Score')
     # plt.plot(x_plots, mse_list, label='MSE List')
     # plt.legend()
-    plot_graphs([x_plots, x_plots], [r2_list, mse_list], labels=['R2_Score', 'MSE'], titles=['R2_Score', 'MSE'])
+    plot_graphs([x_plots, x_plots], [r2_list, mse_list], labels=['R2_Score ' + title_suffix, 'MSE ' + title_suffix], titles=['R2_Score ' + title_suffix, 'MSE ' + title_suffix])
