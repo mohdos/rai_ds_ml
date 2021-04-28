@@ -104,17 +104,18 @@ df.dropna(inplace=True)
 df['CompletionDate'] = df['CompletionDate'].astype(int)
 df['SpudDate'] = df['SpudDate'].astype(int)
 
+chosen_features = ['State', 'Latitude', 'Longitude', 'OperatorAlias', 'formationAlias', 'CompletionDate', 'SpudDate']
 
 # generate train and test data, by giving the required x columns (features), the y column (output), encoding type (one hot / categorization, normalized or not, percent of test size)
 X_train, X_test, Y_train, Y_test = generate_train_test(df, 
-                                    xcolumns=['State', 'Latitude', 'Longitude', 'OperatorAlias', 'formationAlias', 'CompletionDate', 'SpudDate'], 
+                                    xcolumns=chosen_features, 
                                     ycolumn='proppantPerFoot', 
                                     encoding_type=encodingTypes.one_hot_encoding, 
                                     normalized=True,
-                                    test_size=0.15)
+                                    test_size=0.2)
 
 # Random forest regression
-model = RandomForestRegressor(n_estimators=100, max_features=7)
+model = RandomForestRegressor(n_estimators=50, max_features=7)
 model.fit(X_train, Y_train)
 
 # predict the test data
@@ -122,9 +123,19 @@ y_pred = model.predict(X_test)
 ytest_list = Y_test.to_list()
 
 # Calculate metrics (R2 score and Root mean squared error)
-r2score = r2_score(y_true=ytest_list, y_pred=y_pred)
-mse = np.sqrt(mean_squared_error(ytest_list,y_pred))
+r2score_test = r2_score(y_true=ytest_list, y_pred=y_pred)
+mse_test = np.sqrt(mean_squared_error(ytest_list,y_pred))
 
-print('Root Mean squared error =', mse)
-print('R2 Score =', r2score)
+print('\nRoot Mean squared error =', mse_test)
+print('R2 Score =', r2score_test)
 
+
+ytrain_pred = model.predict(X_train)
+ytrain_list = Y_train.to_list()
+
+
+r2score_test = r2_score(y_true=ytrain_list, y_pred=ytrain_pred)
+mse_test = np.sqrt(mean_squared_error(ytrain_list,ytrain_pred))
+
+print('\nRoot Mean squared error train =', mse_test)
+print('R2 Score train =', r2score_test)

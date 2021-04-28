@@ -6,8 +6,10 @@ import matplotlib.pyplot as plt
 import math
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import r2_score
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.svm import SVR
 from matplotlib import pyplot as plt
 from enum import Enum
 
@@ -36,8 +38,12 @@ def get_str_columns(df):
     return cols
 
 def normalized_df(df):
-    normalized=(df-df.min())/(df.max()-df.min())
-    return normalized
+    # normalized=(df-df.min())/(df.max()-df.min())
+    # return normalized
+    df_cpy = df.copy()
+    df_cpy = StandardScaler().fit_transform(df_cpy)
+    df_cpy = pd.DataFrame(df_cpy, index=df.index, columns=df.columns)
+    return df_cpy
 
 def one_hot_encoded(df, columns):
     df_cpy = df.copy()
@@ -52,7 +58,7 @@ def one_hot_encoded(df, columns):
     return df_cpy
 
 
-def generate_train_test(df, xcolumns, ycolumn, encoding_type: encodingTypes=encodingTypes.one_hot_encoding, normalized=False, test_size=0.2):
+def generate_train_test(df, xcolumns, ycolumn, encoding_type: encodingTypes=encodingTypes.one_hot_encoding, normalized=False, test_size=0.2, pca_n=None):
     df_modified = df.dropna(how='any', subset=[column for column in xcolumns]) # drop rows where any of the chosen features are nan
     df_modified = df_modified[[column for column in xcolumns]]
     
@@ -63,9 +69,18 @@ def generate_train_test(df, xcolumns, ycolumn, encoding_type: encodingTypes=enco
         else: # one hot
             df_modified = one_hot_encoded(df_modified, columns=str_cols)
     
+    # if normalized:
+    #     df_modified = normalized_df(df_modified)
+    
+    if pca_n is not None and pca_n > 0 and pca_n < len(xcolumns):
+        pca = PCA(n_components=pca_n)
+        pca.fit(df_modified)
+        columns = ['pca_%i' % i for i in range(pca_n)]
+        df_modified = pd.DataFrame(pca.transform(df_modified), columns=columns, index=df_modified.index)
+
     if normalized:
         df_modified = normalized_df(df_modified)
-            
+
     df_train, df_test = train_test_split(df_modified.join(df[ycolumn]), test_size=test_size)
     Y_train = df_train.pop(ycolumn)
     Y_test = df_test.pop(ycolumn)
@@ -97,8 +112,8 @@ def plot_metrics(df, xcolumns, ycolumn, encoding_type: encodingTypes = encodingT
     mse_list = []
     r2_list = []
     for i in range(runtimes):
-        X_train, X_test, Y_train, Y_test = generate_train_test(df, xcolumns=xcolumns, ycolumn=ycolumn, encoding_type=encoding_type, normalized=normalized, test_size=test_size)
-        model = RandomForestRegressor(n_estimators=50, max_features=3)
+        X_train, X_test, Y_train, Y_test = generate_train_test(df, xcolumns=xcolumns, ycolumn=ycolumn, encoding_type=encoding_type, normalized=normalized, test_size=test_size, pca_n=None)
+        model = RandomForestRegressor(n_estimators=50, max_features=len(xcolumns))
         model.fit(X_train, Y_train)
         y_pred = model.predict(X_test)
         ytest_list = Y_test.to_list()
@@ -114,3 +129,62 @@ def plot_metrics(df, xcolumns, ycolumn, encoding_type: encodingTypes = encodingT
     # plt.plot(x_plots, mse_list, label='MSE List')
     # plt.legend()
     plot_graphs([x_plots, x_plots], [r2_list, mse_list], labels=['R2_Score ' + title_suffix, 'MSE ' + title_suffix], titles=['R2_Score ' + title_suffix, 'MSE ' + title_suffix])
+
+
+# class SVMRegressor:
+
+#     def __init__(self, df, xcolumns, ycolumn, encoding_type: encodingTypes=encodingTypes.one_hot_encoding, normalized=False, test_size=0.2):
+#         # self.df = df
+#         df_modified = df.dropna(how='any', subset=[column for column in xcolumns]) # drop rows where any of the chosen features are nan
+#         df_modified = df_modified[[column for column in xcolumns]]
+        
+#         str_cols = list(set(get_str_columns(df)).intersection(set(xcolumns)))
+#         if len(str_cols) > 0:
+#             if encoding_type == encodingTypes.categorization:
+#                 df_modified = categorized_df(df_modified, columns=str_cols)
+#             else: # one hot
+#                 df_modified = one_hot_encoded(df_modified, columns=str_cols)
+        
+#         if normalized:
+#             self.sc_x = StandardScaler()
+#             self.sc_y = StandardScaler()
+#             df_x_scaled = self.sc_x.fit_transform(df_modified)
+#             df_x_scaled = pd.DataFrame(df_x_scaled, index=df_modified.index, columns=df_modified.columns)
+#             df_y_scaled = self.sc_y.fit_transform(df[ycolumn].to_numpy().reshape(-1, 1))
+#             df_y_scaled = pd.DataFrame(df_y_scaled, index=df[ycolumn].index, columns=['proppantPerFoot'])
+#             df_modified = df_x_scaled.join(df_y_scaled)
+#         else:
+#             self.sc_x = None
+#             self.sc_y = None
+#             df_modified = df_modified.join(df[ycolumn])
+
+#         df_train, df_test = train_test_split(df_modified, test_size=test_size)
+#         self.Y_train = df_train.pop(ycolumn)
+#         self.Y_test = df_test.pop(ycolumn)
+#         self.X_train = df_train
+#         self.X_test = df_test
+
+#         # print('X train = ')
+#         # print(self.X_train.head(10))
+
+#         # print('Y train = ')
+#         # print(self.Y_train.head(10))
+
+#         # print("X train size = {}, X test size = {}, Y train size = {}, Y test size = {}".format(len(self.X_train), len(self.X_test), len(self.X_train), len(self.X_test)))
+
+#     def train_model(self):
+#         self.regressor = SVR(kernel='rbf')
+#         print('Fitting...')
+#         self.regressor.fit(self.X_train, self.Y_train)
+#         print("Done fitting")
+
+#     def model_prediction(self):
+#         print('Predicting...')
+#         y_pred = self.regressor.predict(self.X_test)
+
+#         print('Inverse Prediction...')
+#         y_pred = self.sc_y.inverse_transform(y_pred)
+
+#         print('Successfully done')
+#         return self.Y_test, y_pred
+
